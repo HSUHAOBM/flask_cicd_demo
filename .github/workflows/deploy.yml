@@ -19,6 +19,15 @@ jobs:
           pip install -r requirements.txt
           pytest
 
+      # Bandit 安全檢查
+      - name: Bandit
+        run: |
+          pip install bandit
+          bandit -r app/ | tee bandit_report.txt
+          curl -X POST -H "Content-type: application/json" --data "{
+            \"text\": \"🔐 Bandit 安全掃描完成，有風險項目請查看 log\"
+          }" ${{ secrets.SLACK_WEBHOOK_URL }}
+
       # 部屬到 Linode
       - name: Deploy to Linode
         if: success() # 只有在測試成功時才會執行這一步
