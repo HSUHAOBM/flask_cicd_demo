@@ -1,0 +1,34 @@
+name: Deploy to Linode
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 把 repo 的程式碼 clone 到 runner 上
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      # 執行測試
+      - name: Run Tests
+        run: |
+          pip install -r requirements.txt
+          pytest
+
+      # 部屬到 Linode
+      - name: Deploy to Linode
+        if: success() # 只有在測試成功時才會執行這一步
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.LINODE_HOST }}
+          username: ${{ secrets.LINODE_USERNAME }}
+          key: ${{ secrets.LINODE_SSHKEY }}
+          script: |
+            cd ${{ secrets.LINODE_PROJECT_PATH }}
+            git pull
+            docker compose down
+            docker compose up -d --build
