@@ -13,6 +13,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v2
 
+      # 設定 Python 環境
+      - name: Set Python version
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+
       # 執行測試
       - name: Run Tests
         run: |
@@ -23,12 +29,9 @@ jobs:
       - name: Bandit
         run: |
           pip install bandit
-          bandit -r app/ > bandit_report.txt
-
-          summary=$(grep 'Severity:' bandit_report.txt | head -5 | sed 's/"/\\"/g' | paste -sd '\\n' -)
-
+          bandit -r app/ | tee bandit_report.txt
           curl -X POST -H "Content-type: application/json" --data "{
-            \"text\": \"🔐 Bandit 掃描完成\\n摘要如下：\\n$summary\"
+            \"text\": \"🔐 Bandit 安全掃描完成，有風險項目請查看 log\"
           }" ${{ secrets.SLACK_WEBHOOK_URL }}
 
       # 部屬到 Linode
