@@ -2,6 +2,7 @@
 
 - Flask
 - pytest 測試
+- Bandit sec
 - Compose 容器化
 - 使用 GitHub Actions 實作 CI/CD，自動測試與自動部署到 Linode
 - Slack 通知部署成功與失敗
@@ -58,3 +59,14 @@ docker compose -f docker-compose.test.yml up --build --abort-on-container-exit
 - Push 作者
 - 成功 ✅ 或失敗 ❌ 標記
 
+
+
+## 補充
+實際生產環境 / 團隊專案（尤其有資安規範時）
+Bandit 掃出高風險就直接中止 CI/CD 流程
+做法通常是：
+```bash
+bandit -r app/ --severity-level high
+# 或
+bandit -r app/ --confidence-level high
+```

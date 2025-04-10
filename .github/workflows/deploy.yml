@@ -26,12 +26,17 @@ jobs:
           pytest
 
       # Bandit 安全檢查
-      - name: Bandit
+      - name: Bandit Slack Notify Summary
         run: |
           pip install bandit
           bandit -r app/ | tee bandit_report.txt
+
+          issues_high=$(grep -c "Severity: High" bandit_report.txt)
+          issues_medium=$(grep -c "Severity: Medium" bandit_report.txt)
+          run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
           curl -X POST -H "Content-type: application/json" --data "{
-            \"text\": \"🔐 Bandit 安全掃描完成，有風險項目請查看 log\"
+            \"text\": \"🔐 Bandit 掃描完成：\\n- 高風險：$issues_high\\n- 中風險：$issues_medium\\n📦 點此查看報告與 log：$run_url\"
           }" ${{ secrets.SLACK_WEBHOOK_URL }}
 
       # 部屬到 Linode
