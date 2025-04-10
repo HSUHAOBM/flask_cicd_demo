@@ -31,4 +31,69 @@ jobs:
             cd ${{ secrets.LINODE_PROJECT_PATH }}
             git pull
             docker compose down
-            docker compose up -d --build
+            docker compose up -d --
+
+      # Notify Slack on Success
+      - name: Slack Notify Success
+        if: success()
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "attachments": [
+              {
+                "color": "good",
+                "title": "✅ CI/CD 成功部署到 Linode",
+                "fields": [
+                  {
+                    "title": "Repo",
+                    "value": "${{ github.repository }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Branch",
+                    "value": "${{ github.ref_name }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Commit",
+                    "value": "<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                  },
+                  {
+                    "title": "作者",
+                    "value": "${{ github.actor }}"
+                  }
+                ]
+              }
+            ]
+          }' ${{ secrets.SLACK_WEBHOOK_URL }}
+      # Notify Slack on Failure
+      - name: Slack Notify Failure
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "attachments": [
+              {
+                "color": "danger",
+                "title": "❌ CI/CD 失敗",
+                "fields": [
+                  {
+                    "title": "Repo",
+                    "value": "${{ github.repository }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Branch",
+                    "value": "${{ github.ref_name }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Commit",
+                    "value": "<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                  },
+                  {
+                    "title": "作者",
+                    "value": "${{ github.actor }}"
+                  }
+                ]
+              }
+            ]
+          }' ${{ secrets.SLACK_WEBHOOK_URL }}
