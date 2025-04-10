@@ -23,9 +23,12 @@ jobs:
       - name: Bandit
         run: |
           pip install bandit
-          bandit -r app/ | tee bandit_report.txt
+          bandit -r app/ > bandit_report.txt
+
+          summary=$(grep 'Severity:' bandit_report.txt | head -5 | sed 's/"/\\"/g' | paste -sd '\\n' -)
+
           curl -X POST -H "Content-type: application/json" --data "{
-            \"text\": \"🔐 Bandit 安全掃描完成，有風險項目請查看 log\"
+            \"text\": \"🔐 Bandit 掃描完成\\n摘要如下：\\n$summary\"
           }" ${{ secrets.SLACK_WEBHOOK_URL }}
 
       # 部屬到 Linode
