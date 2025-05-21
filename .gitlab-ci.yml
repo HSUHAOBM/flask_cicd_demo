@@ -65,6 +65,14 @@ notify:
       \"text\": \"✅ GitLab CI 成功：\\n📦 專案: $CI_PROJECT_PATH\\n🌿 分支: $CI_COMMIT_REF_NAME\\n🧑 作者: $GITLAB_USER_NAME\\n🔗 Job: $CI_JOB_URL\"
     }" $SLACK_WEBHOOK_URL
 
+notify_failure:
+  stage: notify
+  when: on_failure
+  script: |
+    curl -X POST -H "Content-type: application/json" --data "{
+      \"text\": \"❌ GitLab CI 失敗：\\n📦 專案: $CI_PROJECT_PATH\\n🌿 分支: $CI_COMMIT_REF_NAME\\n🧑 作者: $GITLAB_USER_NAME\\n🔗 Job: $CI_JOB_URL\"
+    }" $SLACK_WEBHOOK_URL
+
 
 
 
