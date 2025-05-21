@@ -1,64 +1,119 @@
-image: python:3.10
+name: Deploy to Linode
 
-stages:
-  - test
-  - security
-  - sonar
-  - notify
+on:
+  push:
+    branches: [ main ]
 
-variables:
-  SONAR_HOST_URL: "http://172.25.202.56:9000"
-  SONAR_TOKEN: "sqp_你的token"
-  SONAR_PROJECT_KEY: "PythonFlaskDockerTest"
-  SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/xxx/yyy/zzz"
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-before_script:
-  - pip install -r requirements.txt || true
-  - pip install coverage bandit
+    steps:
+      # 把 repo 的程式碼 clone 到 runner 上
+      - name: Checkout Code
+        uses: actions/checkout@v2
 
-test:
-  stage: test
-  script:
-    - coverage run -m unittest discover
-    - coverage xml
-  artifacts:
-    paths:
-      - coverage.xml
-    expire_in: 1 hour
+      # 設定 Python 環境
+      - name: Set Python version
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
 
-security_scan:
-  stage: security
-  script: |
-    bandit -r app/ | tee bandit_report.txt
-    issues_high=$(grep -c "Severity: High" bandit_report.txt || true)
-    issues_medium=$(grep -c "Severity: Medium" bandit_report.txt || true)
+      # 執行測試
+      - name: Run Tests
+        run: |
+          pip install -r requirements.txt
+          pytest
 
-    curl -X POST -H "Content-type: application/json" --data "{
-      \"text\": \"🔐 Bandit 掃描完成：\\n- 高風險：$issues_high\\n- 中風險：$issues_medium\\n📦 Job: $CI_JOB_URL\"
-    }" $SLACK_WEBHOOK_URL
+      # Bandit 安全檢查
+      - name: Bandit Slack Notify Summary
+        run: |
+          pip install bandit
+          bandit -r app/ | tee bandit_report.txt
 
-sonarqube:
-  stage: sonar
-  image: eclipse-temurin:17
-  script:
-    - apt-get update && apt-get install -y unzip wget
-    - wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856.zip
-    - unzip sonar-scanner-cli-4.8.0.2856.zip
-    - export PATH="$PWD/sonar-scanner-4.8.0.2856/bin:$PATH"
+          issues_high=$(grep -c "Severity: High" bandit_report.txt)
+          issues_medium=$(grep -c "Severity: Medium" bandit_report.txt)
+          run_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-    - sonar-scanner \
-        -Dsonar.projectKey=$SONAR_PROJECT_KEY \
-        -Dsonar.sources=. \
-        -Dsonar.host.url=$SONAR_HOST_URL \
-        -Dsonar.login=$SONAR_TOKEN \
-        -Dsonar.python.coverage.reportPaths=coverage.xml
-  dependencies:
-    - test
+          curl -X POST -H "Content-type: application/json" --data "{
+            \"text\": \"🔐 Bandit 掃描完成：\\n- 高風險：$issues_high\\n- 中風險：$issues_medium\\n📦 點此查看報告與 log：$run_url\"
+          }" ${{ secrets.SLACK_WEBHOOK_URL }}
 
-notify_success:
-  stage: notify
-  when: on_success
-  script: |
-    curl -X POST -H "Content-type: application/json" --data "{
-      \"text\": \"✅ GitLab CI 成功：$CI_PROJECT_PATH @ $CI_COMMIT_REF_NAME\\n🧑 作者: $GITLAB_USER_NAME\\n🔗 Link: $CI_JOB_URL\"
-    }" $SLACK_WEBHOOK_URL
+      # 部屬到 Linode
+      - name: Deploy to Linode
+        if: success() # 只有在測試成功時才會執行這一步
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.LINODE_HOST }}
+          username: ${{ secrets.LINODE_USERNAME }}
+          key: ${{ secrets.LINODE_SSHKEY }}
+          script: |
+            cd ${{ secrets.LINODE_PROJECT_PATH }}
+            git pull
+            docker compose down
+            docker compose up -d --
+
+      # Notify Slack on Success
+      - name: Slack Notify Success
+        if: success()
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "attachments": [
+              {
+                "color": "good",
+                "title": "✅ CI/CD 成功部署到 Linode",
+                "fields": [
+                  {
+                    "title": "Repo",
+                    "value": "${{ github.repository }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Branch",
+                    "value": "${{ github.ref_name }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Commit",
+                    "value": "<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                  },
+                  {
+                    "title": "作者",
+                    "value": "${{ github.actor }}"
+                  }
+                ]
+              }
+            ]
+          }' ${{ secrets.SLACK_WEBHOOK_URL }}
+      # Notify Slack on Failure
+      - name: Slack Notify Failure
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "attachments": [
+              {
+                "color": "danger",
+                "title": "❌ CI/CD 失敗",
+                "fields": [
+                  {
+                    "title": "Repo",
+                    "value": "${{ github.repository }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Branch",
+                    "value": "${{ github.ref_name }}",
+                    "short": true
+                  },
+                  {
+                    "title": "Commit",
+                    "value": "<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>"
+                  },
+                  {
+                    "title": "作者",
+                    "value": "${{ github.actor }}"
+                  }
+                ]
+              }
+            ]
+          }' ${{ secrets.SLACK_WEBHOOK_URL }}
