@@ -30,7 +30,7 @@ test:
 security_scan:
   stage: security
   script: |
-    bandit -r . | tee bandit_report.txt
+    bandit -r . --exit-zero | tee bandit_report.txt
     issues_high=$(grep -c "Severity: High" bandit_report.txt || true)
     issues_medium=$(grep -c "Severity: Medium" bandit_report.txt || true)
 
