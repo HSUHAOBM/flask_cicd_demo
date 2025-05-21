@@ -41,12 +41,12 @@ security_scan:
 sonarqube:
   stage: sonar
   image: eclipse-temurin:17
+  before_script: []  # 不執行全域 before_script
   script:
     - apt-get update && apt-get install -y wget unzip
     - wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}.zip
     - unzip sonar-scanner-cli-${SONAR_SCANNER_VERSION}.zip
     - export PATH="$PWD/sonar-scanner-${SONAR_SCANNER_VERSION}/bin:$PATH"
-
     - sonar-scanner \
         -Dsonar.projectKey=$SONAR_PROJECT_KEY \
         -Dsonar.sources=. \
