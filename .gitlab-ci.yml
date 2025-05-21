@@ -7,10 +7,11 @@ stages:
   - notify
 
 variables:
-  SONAR_HOST_URL: "http://172.25.202.56:9000"
-  SONAR_TOKEN: "sqp_你的token"
+  SONAR_SCANNER_VERSION: "5.0.1.3006"
   SONAR_PROJECT_KEY: "PythonFlaskDockerTest"
-  SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/xxx/yyy/zzz"
+  SONAR_HOST_URL: "http://172.25.202.56:9000"
+  SONAR_TOKEN: "squ_8faf6d70fda9c3a3d6002b83d56719aa45ec8397"
+  SLACK_WEBHOOK_URL: "https://hooks.slack.com/services/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"
 
 before_script:
   - pip install -r requirements.txt || true
@@ -29,7 +30,7 @@ test:
 security_scan:
   stage: security
   script: |
-    bandit -r app/ | tee bandit_report.txt
+    bandit -r . | tee bandit_report.txt
     issues_high=$(grep -c "Severity: High" bandit_report.txt || true)
     issues_medium=$(grep -c "Severity: Medium" bandit_report.txt || true)
 
@@ -41,10 +42,10 @@ sonarqube:
   stage: sonar
   image: eclipse-temurin:17
   script:
-    - apt-get update && apt-get install -y unzip wget
-    - wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856.zip
-    - unzip sonar-scanner-cli-4.8.0.2856.zip
-    - export PATH="$PWD/sonar-scanner-4.8.0.2856/bin:$PATH"
+    - apt-get update && apt-get install -y wget unzip
+    - wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}.zip
+    - unzip sonar-scanner-cli-${SONAR_SCANNER_VERSION}.zip
+    - export PATH="$PWD/sonar-scanner-${SONAR_SCANNER_VERSION}/bin:$PATH"
 
     - sonar-scanner \
         -Dsonar.projectKey=$SONAR_PROJECT_KEY \
@@ -55,10 +56,15 @@ sonarqube:
   dependencies:
     - test
 
-notify_success:
+notify:
   stage: notify
   when: on_success
   script: |
     curl -X POST -H "Content-type: application/json" --data "{
-      \"text\": \"✅ GitLab CI 成功：$CI_PROJECT_PATH @ $CI_COMMIT_REF_NAME\\n🧑 作者: $GITLAB_USER_NAME\\n🔗 Link: $CI_JOB_URL\"
+      \"text\": \"✅ GitLab CI 成功：\\n📦 專案: $CI_PROJECT_PATH\\n🌿 分支: $CI_COMMIT_REF_NAME\\n🧑 作者: $GITLAB_USER_NAME\\n🔗 Job: $CI_JOB_URL\"
     }" $SLACK_WEBHOOK_URL
+
+
+
+
+
