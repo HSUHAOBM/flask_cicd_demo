@@ -5,11 +5,14 @@ app = Flask(__name__)
 
 @app.route("/")
 def hello():
-    return "Hello, Ian!"
+    return "Hello, Ian !!"
 
 
 @app.route("/api/echo", methods=["POST"])
 def echo():
+    """
+    Echo the message sent in the request body.
+    """
     try:
         data = request.get_json()
         message = data.get("message", "")
@@ -20,6 +23,9 @@ def echo():
 
 @app.route("/api/add/<int:a>/<int:b>")
 def add(a, b):
+    """
+    Add two numbers and return the result.
+    """
     result = a + b
     return jsonify({"result": result})
 
