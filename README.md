@@ -4,8 +4,9 @@
 - pytest 測試
 - Bandit sec
 - Compose 容器化
-- 使用 GitHub Actions 實作 CI/CD，自動測試與自動部署到 Linode
-- Slack 通知部署成功與失敗
+- CI/CD：
+    - GitHub Actions：單元測試、Bandit 安全檢查、自動部署至 Linode 並發送 Slack 通知
+    - GitLab CI（內網）：單元測試、資安掃描、SonarQube 掃描 + Slack 通知
 
 
 ## 本地測試方式
@@ -70,3 +71,6 @@ bandit -r app/ --severity-level high
 # 或
 bandit -r app/ --confidence-level high
 ```
+
+
+
